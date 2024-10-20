@@ -1,0 +1,80 @@
+# Example: Nginx static site with minimal configuration
+# Usage: helm install my-site ./app-chart -f examples/static-site.yaml
+
+replicaCount: 2
+
+image:
+  repository: registry.example.com/acme/company-website
+  tag: "latest"
+  pullPolicy: Always
+
+fullnameOverride: company-website
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+  hosts:
+    - host: www.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: website-tls
+      hosts:
+        - www.example.com
+        - example.com
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# Nginx serves on port 80 and runs as root by default.
+# Use a custom nginx image that runs as non-root, or adjust the security context.
+podSecurityContext:
+  runAsNonRoot: false
+
+securityContext:
+  readOnlyRootFilesystem: false
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+# No startup probe needed for a static site -- nginx starts immediately
+startupProbe: {}
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

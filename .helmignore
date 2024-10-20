@@ -1,0 +1,19 @@
+# Patterns to ignore when building packages.
+.DS_Store
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+.project
+.settings/
+*.tmproj
+.flattened-pom.xml
+examples/
+README.md
+LICENSE
+debug/

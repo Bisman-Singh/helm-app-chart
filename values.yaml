@@ -1,0 +1,235 @@
+# -- Number of pod replicas (ignored if HPA is enabled)
+replicaCount: 1
+
+image:
+  # -- Container image repository
+  repository: nginx
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag override (defaults to chart appVersion)
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+# - name: regcred
+
+# -- Override the release name prefix
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a service account
+  create: true
+  # -- Annotations for the service account (e.g., IAM role bindings)
+  annotations: {}
+  # -- Service account name override (generated if not set)
+  name: ""
+  # -- Automount the service account token
+  automountServiceAccountToken: true
+
+# -- Annotations to add to all pods
+podAnnotations: {}
+
+# -- Labels to add to all pods
+podLabels: {}
+
+# -- Pod security context (applied to the pod spec)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  # -- Service type: ClusterIP, NodePort, or LoadBalancer
+  type: ClusterIP
+  # -- Service port
+  port: 80
+  # -- Target port on the container
+  targetPort: 8080
+  # -- Node port (only used when type is NodePort)
+  nodePort: ""
+  # -- Additional service annotations
+  annotations: {}
+
+ingress:
+  # -- Enable ingress resource creation
+  enabled: false
+  # -- Ingress class name (e.g., nginx, alb, traefik)
+  className: ""
+  # -- Ingress annotations
+  annotations: {}
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # -- Ingress host rules
+  hosts: []
+    # - host: myapp.example.com
+    #   paths:
+    #     - path: /
+    #       pathType: Prefix
+  # -- TLS configuration
+  tls: []
+    # - secretName: myapp-tls
+    #   hosts:
+    #     - myapp.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+hpa:
+  # -- Enable Horizontal Pod Autoscaler
+  enabled: false
+  # -- Minimum replicas
+  minReplicas: 2
+  # -- Maximum replicas
+  maxReplicas: 10
+  # -- Target CPU utilization percentage
+  targetCPUUtilizationPercentage: 75
+  # -- Target memory utilization percentage (optional)
+  targetMemoryUtilizationPercentage: ""
+  # -- Custom metrics for autoscaling
+  customMetrics: []
+
+pdb:
+  # -- Enable PodDisruptionBudget
+  enabled: false
+  # -- Minimum available pods (mutually exclusive with maxUnavailable)
+  minAvailable: 1
+  # -- Maximum unavailable pods (mutually exclusive with minAvailable)
+  maxUnavailable: ""
+
+configmap:
+  # -- Enable ConfigMap creation
+  enabled: false
+  # -- ConfigMap data as key-value pairs
+  data: {}
+    # APP_CONFIG: |
+    #   key1=value1
+    #   key2=value2
+    # FEATURE_FLAGS: "feature_a=true,feature_b=false"
+
+secret:
+  # -- Enable Secret creation (for non-sensitive config only)
+  # -- For real secrets, use External Secrets Operator, Sealed Secrets, or
+  # -- pre-created K8s Secrets and reference them via env[].valueFrom.secretKeyRef
+  enabled: false
+  data: {}
+    # SOME_CONFIG: "non-sensitive-value"
+
+# -- Environment variables for the main container
+env: []
+  # - name: APP_ENV
+  #   value: "production"
+  # - name: DB_HOST
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: db-credentials
+  #       key: host
+
+# -- Mount environment from ConfigMaps or Secrets
+envFrom: []
+  # - configMapRef:
+  #     name: app-config
+  # - secretRef:
+  #     name: app-secrets
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+  successThreshold: 1
+
+# -- Node labels for pod assignment
+nodeSelector: {}
+
+# -- Tolerations for pod scheduling
+tolerations: []
+
+# -- Affinity rules for pod scheduling
+affinity: {}
+
+# -- Topology spread constraints for pod distribution
+topologySpreadConstraints: []
+  # - maxSkew: 1
+  #   topologyKey: topology.kubernetes.io/zone
+  #   whenUnsatisfiable: DoNotSchedule
+  #   labelSelector:
+  #     matchLabels: {}
+
+# -- Additional volumes for the pod
+volumes: []
+  # - name: tmp
+  #   emptyDir: {}
+  # - name: config
+  #   configMap:
+  #     name: app-config
+
+# -- Volume mounts for the main container
+volumeMounts: []
+  # - name: tmp
+  #   mountPath: /tmp
+  # - name: config
+  #   mountPath: /etc/config
+  #   readOnly: true
+
+# -- Init containers to run before the main container
+initContainers: []
+  # - name: init-db
+  #   image: busybox:1.36
+  #   command: ['sh', '-c', 'until nc -z db-host 5432; do sleep 2; done']
+
+# -- Sidecar containers to run alongside the main container
+sidecarContainers: []
+  # - name: log-shipper
+  #   image: fluent/fluent-bit:latest
+  #   volumeMounts:
+  #     - name: logs
+  #       mountPath: /var/log/app
+
+# -- Grace period for pod termination
+terminationGracePeriodSeconds: 30
+
+# -- Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
